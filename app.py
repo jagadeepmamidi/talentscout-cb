@@ -1,66 +1,75 @@
 import streamlit as st
+import pandas as pd
+import os
 import time
+
+def save_candidate_data(candidate_info):
+    """
+    Saves the collected candidate information to a CSV file.
+    In a real-world application, this would be a secure database call.
+    """
+    df = pd.DataFrame([candidate_info])
+    file_path = 'candidates.csv'
+
+    if not os.path.exists(file_path):
+        df.to_csv(file_path, index=False)
+    else:
+        df.to_csv(file_path, mode='a', header=False, index=False)
 
 def call_llm_mock(prompt_template, user_data):
     """
-    Simulates a call to a Large Language Model.
-    In a real application, this function would interact with an API (e.g., OpenAI, Cohere).
-    It uses the prompt_template and injects user_data to generate a response.
+    Simulates a call to a Large Language Model for generating technical questions.
     """
-    if "generate technical questions" in prompt_template:
-        tech_stack = user_data.get("tech_stack", "general")
-        experience = user_data.get("experience", "an unspecified number of")
-        position = user_data.get("position", "a role")
+    tech_stack = user_data.get("tech_stack", "general")
+    experience = user_data.get("experience", "an unspecified number of")
+    position = user_data.get("position", "a role")
 
-        st.session_state.messages.append({"role": "assistant", "content": f"Understood. Generating relevant technical questions for a candidate with {experience} years of experience applying for {position} with skills in {tech_stack}. Please wait a moment..."})
-        time.sleep(2)
+    # Simulate a thinking process
+    st.session_state.messages.append({"role": "assistant", "content": f"Understood. Generating relevant technical questions for a candidate with {experience} years of experience applying for {position} with skills in {tech_stack}. Please wait a moment..."})
+    time.sleep(2)
 
-        questions = {
-            "python": [
-                "1. Can you explain the difference between a list and a tuple in Python?",
-                "2. What are decorators and how have you used them?",
-                "3. Describe the Global Interpreter Lock (GIL) and its implications for multi-threaded programming in Python."
-            ],
-            "django": [
-                "1. What is the Django ORM and what are its main advantages?",
-                "2. Explain the MVT (Model-View-Template) architecture in Django.",
-                "3. How do you handle database migrations in a Django project?"
-            ],
-            "javascript": [
-                "1. What is the difference between `==` and `===` in JavaScript?",
-                "2. Can you explain what a closure is and provide a simple example?",
-                "3. Describe event bubbling and capturing in the context of the DOM."
-            ],
-            "react": [
-                "1. What is the Virtual DOM and how does it improve performance?",
-                "2. Explain the difference between state and props in React.",
-                "3. Describe the component lifecycle in a class-based React component."
-            ],
-            "sql": [
-                "1. What is the difference between an `INNER JOIN` and a `LEFT JOIN`?",
-                "2. What are database indexes and why are they important for performance?",
-                "3. Explain the concept of a transaction and the ACID properties."
-            ]
-        }
+    questions = {
+        "python": [
+            "1. Can you explain the difference between a list and a tuple in Python?",
+            "2. What are decorators and how have you used them?",
+            "3. Describe the Global Interpreter Lock (GIL) and its implications."
+        ],
+        "django": [
+            "1. What is the Django ORM and what are its main advantages?",
+            "2. Explain the MVT (Model-View-Template) architecture.",
+            "3. How do you handle database migrations in a Django project?"
+        ],
+        "javascript": [
+            "1. What is the difference between `==` and `===` in JavaScript?",
+            "2. Can you explain what a closure is and provide a simple example?",
+            "3. Describe event bubbling and capturing."
+        ],
+        "react": [
+            "1. What is the Virtual DOM and how does it improve performance?",
+            "2. Explain the difference between state and props in React.",
+            "3. Describe the component lifecycle in a class-based component."
+        ],
+        "sql": [
+            "1. What is the difference between an `INNER JOIN` and a `LEFT JOIN`?",
+            "2. What are database indexes and why are they important?",
+            "3. Explain the concept of a transaction and the ACID properties."
+        ]
+    }
 
-        response = "Great, based on your tech stack, here are a few questions for you:\n\n"
-        tech_stack_lower = [tech.lower() for tech in tech_stack.split(',')]
-        found_questions = False
-        for tech in tech_stack_lower:
-            tech = tech.strip()
-            if tech in questions:
-                found_questions = True
-                response += f"**For {tech.capitalize()}:**\n"
-                response += "\n".join(questions[tech]) + "\n\n"
+    response = "Great, based on your tech stack, here are a few questions for you:\n\n"
+    tech_stack_lower = [tech.lower() for tech in tech_stack.split(',')]
+    found_questions = False
+    for tech in tech_stack_lower:
+        tech = tech.strip()
+        if tech in questions:
+            found_questions = True
+            response += f"**For {tech.capitalize()}:**\n"
+            response += "\n".join(questions[tech]) + "\n\n"
 
-        if not found_questions:
-             response = "Thank you for sharing your tech stack. It seems quite specialized. We will have a technical specialist review your profile and reach out with tailored questions. For now, we can proceed."
+    if not found_questions:
+         response = "Thank you for sharing your tech stack. It seems quite specialized. We will have a technical specialist review your profile and reach out with tailored questions."
 
-        return response
-    else:
-        # Fallback for other simulated calls, though not used in this specific flow
-        return "I'm sorry, I'm not sure how to respond to that."
-
+    return response
 
 def initialize_session_state():
     """Initializes the session state variables for the chatbot."""
@@ -82,81 +91,72 @@ def get_next_question(current_state):
         "GATHERING_PHONE": "Thanks. How many years of professional experience do you have?",
         "GATHERING_EXPERIENCE": "Understood. What is the desired position you are applying for?",
         "GATHERING_POSITION": "What is your current location (City, Country)?",
-        "GATHERING_LOCATION": "And finally, what is your tech stack? Please list the programming languages, frameworks, and databases you are proficient in (e.g., Python, Django, React, SQL)."
+        "GATHERING_LOCATION": "And finally, what is your tech stack? Please list the programming languages, frameworks, and tools you are proficient in (e.g., Python, Django, React, SQL)."
     }
     return question_map.get(current_state, "")
 
 def handle_user_input(prompt):
     """Processes user input, updates state, and generates chatbot responses."""
     st.session_state.messages.append({"role": "user", "content": prompt})
-
     current_state = st.session_state.state
     response = ""
+    state_machine = {
+        "GREETING": ("full_name", "GATHERING_NAME"),
+        "GATHERING_NAME": ("email", "GATHERING_EMAIL"),
+        "GATHERING_EMAIL": ("phone", "GATHERING_PHONE"),
+        "GATHERING_PHONE": ("experience", "GATHERING_EXPERIENCE"),
+        "GATHERING_EXPERIENCE": ("position", "GATHERING_POSITION"),
+        "GATHERING_POSITION": ("location", "GATHERING_LOCATION"),
+    }
 
-    if current_state == "GREETING":
-        st.session_state.candidate_info["full_name"] = prompt
-        st.session_state.state = "GATHERING_NAME"
+    if current_state in state_machine:
+        key, next_state = state_machine[current_state]
+        st.session_state.candidate_info[key] = prompt
+        st.session_state.state = next_state
         response = get_next_question(st.session_state.state)
-
-    elif current_state == "GATHERING_NAME":
-        st.session_state.candidate_info["email"] = prompt
-        st.session_state.state = "GATHERING_EMAIL"
-        response = get_next_question(st.session_state.state)
-
-    elif current_state == "GATHERING_EMAIL":
-        st.session_state.candidate_info["phone"] = prompt
-        st.session_state.state = "GATHERING_PHONE"
-        response = get_next_question(st.session_state.state)
-
-    elif current_state == "GATHERING_PHONE":
-        st.session_state.candidate_info["experience"] = prompt
-        st.session_state.state = "GATHERING_EXPERIENCE"
-        response = get_next_question(st.session_state.state)
-
-    elif current_state == "GATHERING_EXPERIENCE":
-        st.session_state.candidate_info["position"] = prompt
-        st.session_state.state = "GATHERING_POSITION"
-        response = get_next_question(st.session_state.state)
-
-    elif current_state == "GATHERING_POSITION":
-        st.session_state.candidate_info["location"] = prompt
-        st.session_state.state = "GATHERING_LOCATION"
-        response = get_next_question(st.session_state.state)
+        st.session_state.messages.append({"role": "assistant", "content": response})
 
     elif current_state == "GATHERING_LOCATION":
         st.session_state.candidate_info["tech_stack"] = prompt
         st.session_state.state = "GENERATING_QUESTIONS"
-        prompt_template = "You are a technical interviewer. A candidate with {experience} years of experience, applying for {position}, has declared the following tech stack: {tech_stack}. Please generate technical questions."
+        prompt_template = "Generate technical questions based on user's tech stack."
         response = call_llm_mock(prompt_template, st.session_state.candidate_info)
+        st.session_state.messages.append({"role": "assistant", "content": response})
         st.session_state.state = "CONCLUDED"
 
     if st.session_state.state == "CONCLUDED":
-        final_message = "Thank you for your time and for answering these initial questions. Your profile has been recorded. Our recruitment team will review your information and get back to you with the next steps. Have a great day!"
-        st.session_state.messages.append({"role": "assistant", "content": response})
+        final_message = "This concludes our initial automated screening. Thank you for your time and for answering these questions. Our recruitment team will review your profile and get back to you with the next steps. You may now close this window."
         st.session_state.messages.append({"role": "assistant", "content": final_message})
+        save_candidate_data(st.session_state.candidate_info)
         st.session_state.conversation_ended = True
-
-    else:
-        st.session_state.messages.append({"role": "assistant", "content": response})
-
 
 def main():
     """Main function to run the Streamlit application."""
-    st.title("TalentScout Hiring Assistant")
+    st.set_page_config(page_title="TalentScout Assistant", page_icon="🤖", layout="centered")
+
+    with st.sidebar:
+        st.header("TalentScout Inc.")
+        st.markdown("Welcome to the initial screening process. Our AI assistant will guide you through the first steps.")
+        st.markdown("Please answer all questions to the best of your ability. Good luck!")
+
+    st.title("🤖 TalentScout Hiring Assistant")
+    st.markdown("---")
 
     initialize_session_state()
 
     if not st.session_state.messages:
-        greeting = "Hello! I am the intelligent Hiring Assistant from TalentScout. I'm here to help with the initial screening process by gathering some essential information. Let's get started. You can type 'exit' or 'bye' at any time to end our conversation."
+        greeting = "Hello! I am the intelligent Hiring Assistant from TalentScout. I'm here to gather some essential information to begin the screening process. You can type 'exit' or 'bye' to end our conversation at any time."
         st.session_state.messages.append({"role": "assistant", "content": greeting})
         first_question = get_next_question(st.session_state.state)
         st.session_state.messages.append({"role": "assistant", "content": first_question})
 
     for message in st.session_state.messages:
-        with st.chat_message(message["role"]):
+        avatar = '👤' if message["role"] == "user" else '🤖'
+        with st.chat_message(message["role"], avatar=avatar):
             st.markdown(message["content"])
 
     if st.session_state.conversation_ended:
+        st.chat_input("The conversation has ended.", disabled=True)
         st.stop()
 
     prompt = st.chat_input("Your answer...")
@@ -169,10 +169,25 @@ def main():
             st.session_state.messages.append({"role": "assistant", "content": farewell_message})
             st.session_state.conversation_ended = True
             st.rerun()
-
         else:
             handle_user_input(prompt)
             st.rerun()
 
 if __name__ == "__main__":
-    main()
+    main()```
+
+### Summary of Changes and How They Address Your Points
+
+1.  **Data Storage Solution:**
+    *   The `save_candidate_data` function is called at the very end of the conversation.
+    *   It uses `pandas` to create a DataFrame from the `candidate_info` dictionary.
+    *   It then appends this information to a `candidates.csv` file in your project directory. This simulates a backend process as requested and fulfills the "storing candidate information" requirement.
+
+2.  **UI Enhancements:**
+    *   `st.set_page_config()`: Sets the browser tab title and a robot emoji as the favicon.
+    *   `st.sidebar`: A sidebar is added to provide context, branding ("TalentScout Inc."), and instructions without cluttering the main chat interface.
+    *   **Avatars:** The chat messages now have user (👤) and assistant (🤖) icons, making the conversation feel more interactive and visually pleasing.
+
+3.  **Improved Conversation Flow:**
+    *   The final message is now more explicit: *"This concludes our initial automated screening... You may now close this window."* This clearly tells the user that the chatbot's task is complete and sets the expectation that the conversation is over.
+    *   The chat input box is explicitly disabled once the conversation ends using `st.chat_input("...", disabled=True)`, providing a clear visual cue that no more input is expected. This directly solves the "was not able to ask more questions" issue by making it clear that you're not supposed to.

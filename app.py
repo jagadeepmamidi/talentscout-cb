@@ -17,12 +17,12 @@ def get_llm_response(prompt, model="gpt-3.5-turbo"):
     Sends a prompt to the OpenAI API and retrieves the model's response.
     """
     try:
-        response = openai.ChatCompletion.create(
+        response = openai.chat.completions.create( # Updated OpenAI SDK call
             model=model,
             messages=[{"role": "user", "content": prompt}],
             temperature=0.5,
         )
-        return response.choices[0].message['content'].strip()
+        return response.choices[0].message.content.strip()
     except Exception as e:
         st.error(f"Error communicating with the language model: {e}")
         return "I'm sorry, I'm having trouble connecting to my brain right now."
@@ -51,7 +51,7 @@ def save_to_csv():
         st.session_state.candidate_info['chat_history'] = "\n".join([f"{msg['role']}: {msg['content']}" for msg in st.session_state.chat_history])
         df = pd.DataFrame([st.session_state.candidate_info])
         return df.to_csv(index=False).encode('utf-8')
-    return ""
+    return b"" # Return empty bytes if no data
 
 def handle_user_input(user_input):
     """
@@ -59,6 +59,7 @@ def handle_user_input(user_input):
     """
     st.session_state.chat_history.append({"role": "user", "content": user_input})
 
+    response = "" # Initialize response
     # --- Conversation Stages ---
     if st.session_state.stage == 'greeting':
         st.session_state.stage = 'gather_name'
@@ -91,10 +92,15 @@ def handle_user_input(user_input):
         st.session_state.questions_asked = 0
         response = "Thanks for sharing your tech stack. I will now ask you a few technical questions based on what you've listed."
         # Generate and ask the first question
-        prompt = f"Generate one concise technical interview question for a candidate proficient in {st.session_state.tech_stack[0]}."
-        tech_question = get_llm_response(prompt)
-        response += f"\n\nLet's start with {st.session_state.tech_stack[0]}: {tech_question}"
-        st.session_state.candidate_info[f"Question 1 ({st.session_state.tech_stack[0]})"] = tech_question
+        if st.session_state.tech_stack:
+            prompt = f"Generate one concise technical interview question for a candidate proficient in {st.session_state.tech_stack[0]}."
+            tech_question = get_llm_response(prompt)
+            response += f"\n\nLet's start with {st.session_state.tech_stack[0]}: {tech_question}"
+            st.session_state.candidate_info[f"Question 1 ({st.session_state.tech_stack[0]})"] = tech_question
+        else:
+            st.session_state.stage = 'conclusion' # Skip to conclusion if no tech stack provided
+            response = "It seems you haven't listed a tech stack. We will proceed with the information we have."
+
 
     elif st.session_state.stage == 'technical_questions':
         current_tech_index = st.session_state.questions_asked
@@ -112,13 +118,14 @@ def handle_user_input(user_input):
             st.session_state.stage = 'conclusion'
             response = "Thank you for your answers. That's all the technical questions for now."
 
-    if st.session_state.stage == 'conclusion':
+    if st.session_state.stage == 'conclusion' and not response: # Ensure conclusion message is set once
         st.session_state.candidate_info['Application Date'] = datetime.date.today().isoformat()
         response = "Thank you for your time and for completing the initial screening. Your information has been recorded. Our recruitment team will review your profile and get in touch if your skills and experience are a match for any open roles. Have a great day!"
         st.session_state.stage = 'finished'
 
     # --- Append assistant response to chat history ---
-    st.session_state.chat_history.append({"role": "assistant", "content": response})
+    if response:
+        st.session_state.chat_history.append({"role": "assistant", "content": response})
 
 # --- Streamlit UI Configuration ---
 st.set_page_config(page_title="TalentScout Hiring Assistant", page_icon="🤖")
@@ -158,9 +165,9 @@ if st.session_state.stage != 'finished':
             st.session_state.chat_history.append({"role": "user", "content": prompt})
             st.session_state.chat_history.append({"role": "assistant", "content": "Thank you for your time. The conversation has now ended. Have a great day!"})
             st.session_state.stage = 'finished'
-            st.experimental_rerun()
+            st.rerun() # <<< CORRECTED LINE
         else:
             handle_user_input(prompt)
-            st.experimental_rerun()
+            st.rerun() # <<< CORRECTED LINE
 else:
     st.success("The conversation has concluded. Thank you for using TalentScout!")

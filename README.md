@@ -1,4 +1,4 @@
-```
+
 # TalentScout - Intelligent Hiring Assistant
 
 ## Project Overview
@@ -98,4 +98,4 @@ Do not ask for code implementations, just conceptual questions."
 *   **Challenge: Handling Unexpected User Input**
     *   **Problem:** Users might provide input that doesn't directly answer the question or is irrelevant.
     *   **Solution:** The chatbot employs a strict state-based flow. It interprets any input received in a particular state as the answer to the question associated with that state. While a more advanced implementation could use an LLM for intent recognition, this direct approach serves as a robust fallback mechanism, preventing the conversation from deviating from its primary purpose of information gathering.
-```
+

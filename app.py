@@ -8,6 +8,8 @@ def save_candidate_data(candidate_info):
     Saves the collected candidate information to a CSV file.
     In a real-world application, this would be a secure database call.
     """
+    # Set a default value for technical_answers if it's missing (e.g., user exits early)
+    candidate_info.setdefault('technical_answers', 'N/A')
     df = pd.DataFrame([candidate_info])
     file_path = 'candidates.csv'
 
@@ -24,9 +26,9 @@ def call_llm_mock(prompt_template, user_data):
     experience = user_data.get("experience", "an unspecified number of")
     position = user_data.get("position", "a role")
 
-    # Simulate a thinking process
+    # Simulate a thinking process for the user
     st.session_state.messages.append({"role": "assistant", "content": f"Understood. Generating relevant technical questions for a candidate with {experience} years of experience applying for {position} with skills in {tech_stack}. Please wait a moment..."})
-    time.sleep(2)
+    time.sleep(2) # Pauses for 2 seconds to simulate work
 
     questions = {
         "python": [
@@ -100,6 +102,8 @@ def handle_user_input(prompt):
     st.session_state.messages.append({"role": "user", "content": prompt})
     current_state = st.session_state.state
     response = ""
+    
+    # Information gathering states
     state_machine = {
         "GREETING": ("full_name", "GATHERING_NAME"),
         "GATHERING_NAME": ("email", "GATHERING_EMAIL"),
@@ -116,16 +120,27 @@ def handle_user_input(prompt):
         response = get_next_question(st.session_state.state)
         st.session_state.messages.append({"role": "assistant", "content": response})
 
+    # Tech stack and question generation state
     elif current_state == "GATHERING_LOCATION":
         st.session_state.candidate_info["tech_stack"] = prompt
         st.session_state.state = "GENERATING_QUESTIONS"
         prompt_template = "Generate technical questions based on user's tech stack."
         response = call_llm_mock(prompt_template, st.session_state.candidate_info)
         st.session_state.messages.append({"role": "assistant", "content": response})
+        
+        # New state transition: ask for the answers
+        follow_up = "Please provide your answers to the questions above in a single message. Take your time to be as clear and concise as possible."
+        st.session_state.messages.append({"role": "assistant", "content": follow_up})
+        st.session_state.state = "AWAITING_ANSWERS"
+
+    # New state: waiting for and collecting the technical answers
+    elif current_state == "AWAITING_ANSWERS":
+        st.session_state.candidate_info["technical_answers"] = prompt
         st.session_state.state = "CONCLUDED"
 
+    # Conclusion state
     if st.session_state.state == "CONCLUDED":
-        final_message = "This concludes our initial automated screening. Thank you for your time and for answering these questions. Our recruitment team will review your profile and get back to you with the next steps. You may now close this window."
+        final_message = "Thank you for your detailed response. This concludes our initial automated screening. Our recruitment team will review your profile and answers, and get back to you with the next steps. You may now close this window."
         st.session_state.messages.append({"role": "assistant", "content": final_message})
         save_candidate_data(st.session_state.candidate_info)
         st.session_state.conversation_ended = True

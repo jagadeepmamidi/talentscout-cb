@@ -174,20 +174,4 @@ def main():
             st.rerun()
 
 if __name__ == "__main__":
-    main()```
-
-### Summary of Changes and How They Address Your Points
-
-1.  **Data Storage Solution:**
-    *   The `save_candidate_data` function is called at the very end of the conversation.
-    *   It uses `pandas` to create a DataFrame from the `candidate_info` dictionary.
-    *   It then appends this information to a `candidates.csv` file in your project directory. This simulates a backend process as requested and fulfills the "storing candidate information" requirement.
-
-2.  **UI Enhancements:**
-    *   `st.set_page_config()`: Sets the browser tab title and a robot emoji as the favicon.
-    *   `st.sidebar`: A sidebar is added to provide context, branding ("TalentScout Inc."), and instructions without cluttering the main chat interface.
-    *   **Avatars:** The chat messages now have user (👤) and assistant (🤖) icons, making the conversation feel more interactive and visually pleasing.
-
-3.  **Improved Conversation Flow:**
-    *   The final message is now more explicit: *"This concludes our initial automated screening... You may now close this window."* This clearly tells the user that the chatbot's task is complete and sets the expectation that the conversation is over.
-    *   The chat input box is explicitly disabled once the conversation ends using `st.chat_input("...", disabled=True)`, providing a clear visual cue that no more input is expected. This directly solves the "was not able to ask more questions" issue by making it clear that you're not supposed to.
+    main()
